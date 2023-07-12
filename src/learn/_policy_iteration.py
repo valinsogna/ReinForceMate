@@ -35,7 +35,7 @@ class Policy_iteration(object):
         return state_value
 
     def evaluate_policy(self, gamma=0.9, synchronous=True):
-        self.agent.value_function_prev = self.agent.value_function.copy()  # For synchronous updates
+        self.agent.value_function_prev = self.agent.value_function.clone()  # For synchronous updates
         for row in range(self.agent.value_function.shape[0]):
             for col in range(self.agent.value_function.shape[1]):
                 self.agent.value_function[row, col] = self.evaluate_state((row, col), gamma=gamma,
@@ -46,7 +46,7 @@ class Policy_iteration(object):
         Finds the greedy policy w.r.t. the current value function
         """
 
-        self.agent.policy_prev = self.agent.policy.copy()
+        self.agent.policy_prev = self.agent.policy.clone()
         for row in range(self.agent.action_function.shape[0]):
             for col in range(self.agent.action_function.shape[1]):
                 for action in range(self.agent.action_function.shape[2]):
@@ -87,8 +87,8 @@ class Policy_iteration(object):
             if value_delta_max < eps:
                 break
         print("Value function for this policy:")
-        print(self.agent.value_function.round().astype(int))
-        action_function_prev = self.agent.action_function.copy()
+        print(torch.round(self.agent.value_function).to(torch.int))
+        action_function_prev = self.agent.action_function.clone()
         print("\n Improving policy:")
         self.improve_policy()
         policy_stable = self.agent.compare_policies() < 1

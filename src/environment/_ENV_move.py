@@ -17,7 +17,7 @@ class Board(object):
             episode_end = False
             old_state = self.state
             new_state = (self.state[0] + action[0], self.state[1] + action[1])  # step
-            self.state = old_state if torch.min(new_state) < 0 or torch.max(new_state) > 7 else new_state
+            self.state = old_state if min(new_state) < 0 or max(new_state) > 7 else new_state
             return reward, episode_end
 
     def render(self):
