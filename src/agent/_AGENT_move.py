@@ -1,5 +1,4 @@
-import numpy as np
-import pprint
+import torch
 
 
 class Piece(object):
@@ -12,13 +11,13 @@ class Piece(object):
         """
         self.piece = piece
         self.init_actionspace()
-        self.value_function = np.zeros(shape=(8, 8))
+        self.value_function = torch.zeros(shape=(8, 8))
         self.value_function_prev = self.value_function.copy()
-        self.N = np.zeros(shape=(8, 8))
-        self.E = np.zeros(shape=(8, 8))
+        self.N = torch.zeros(shape=(8, 8))
+        self.E = torch.zeros(shape=(8, 8))
         self.Returns = {}
-        self.action_function = np.zeros(shape=(8, 8, len(self.action_space)))
-        self.policy = np.zeros(shape=self.action_function.shape)
+        self.action_function = torch.zeros(shape=(8, 8, len(self.action_space)))
+        self.policy = torch.zeros(shape=self.action_function.shape)
         self.policy_prev = self.policy.copy()
 
     def apply_policy(self, state, epsilon):
@@ -32,16 +31,17 @@ class Piece(object):
             the selected action for the state under the current policy
 
         """
-        greedy_action_value = np.max(self.policy[state[0], state[1], :])
+        greedy_action_value = torch.max(self.policy[state[0], state[1], :])
         greedy_indices = [i for i, a in enumerate(self.policy[state[0], state[1], :]) if
                           a == greedy_action_value]
-        action_index = np.random.choice(greedy_indices)
-        if np.random.uniform(0, 1) < epsilon:
-            action_index = np.random.choice(range(len(self.action_space)))
+        # action_index = np.random.choice(greedy_indices)
+        action_index = greedy_indices[torch.randint(0, len(greedy_indices), size=(1,))]
+        if torch.rand(1) < epsilon:
+            action_index = torch.randint(0, len(self.action_space), size=(1,))
         return action_index
 
     def compare_policies(self):
-        return np.sum(np.abs(self.policy - self.policy_prev))
+        return torch.sum(torch.abs(self.policy - self.policy_prev))
 
     def init_actionspace(self):
         assert self.piece in ["king", "rook", "bishop",

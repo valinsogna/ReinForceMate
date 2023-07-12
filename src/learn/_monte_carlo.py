@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 import pprint
 
 
@@ -24,13 +24,13 @@ class Monte_carlo(object):
             action_index = actions[idx]
             if (state, action_index) in first_visits:
                 continue
-            r = np.sum(rewards[idx:])
+            r = torch.sum(rewards[idx:])
             if (state, action_index) in self.agent.Returns.keys():
                 self.agent.Returns[(state, action_index)].append(r)
             else:
                 self.agent.Returns[(state, action_index)] = [r]
             self.agent.action_function[state[0], state[1], action_index] = \
-                np.mean(self.agent.Returns[(state, action_index)])
+                torch.mean(self.agent.Returns[(state, action_index)])
             first_visits.append((state, action_index))
         # Update the policy. In Monte Carlo Control, this is greedy behavior with respect to the action function
         self.agent.policy = self.agent.action_function.copy()
@@ -51,7 +51,7 @@ class Monte_carlo(object):
             if state not in visited_states and first_visit:
                 self.agent.N[state[0], state[1]] += 1
                 n = self.agent.N[state[0], state[1]]
-                forward_rewards = np.sum(rewards[idx:])
+                forward_rewards = torch.sum(rewards[idx:])
                 expected_rewards = self.agent.value_function[state[0], state[1]]
                 delta = forward_rewards - expected_rewards
                 self.agent.value_function[state[0], state[1]] += ((1 / n) * delta)
@@ -59,7 +59,7 @@ class Monte_carlo(object):
             elif not first_visit:
                 self.agent.N[state[0], state[1]] += 1
                 n = self.agent.N[state[0], state[1]]
-                forward_rewards = np.sum(rewards[idx:])
+                forward_rewards = torch.sum(rewards[idx:])
                 expected_rewards = self.agent.value_function[state[0], state[1]]
                 delta = forward_rewards - expected_rewards
                 self.agent.value_function[state[0], state[1]] += ((1 / n) * delta)

@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 import pprint
 
 
@@ -18,7 +18,7 @@ class Policy_iteration(object):
         Returns: The expected value of the state under the current policy.
 
         """
-        greedy_action_value = np.max(self.agent.policy[state[0], state[1], :])
+        greedy_action_value = torch.max(self.agent.policy[state[0], state[1], :])
         greedy_indices = [i for i, a in enumerate(self.agent.policy[state[0], state[1], :]) if
                           a == greedy_action_value]  # List of all greedy actions
         prob = 1 / len(greedy_indices)  # probability of an action occuring
@@ -55,7 +55,7 @@ class Policy_iteration(object):
                     successor_state_value = 0 if episode_end else self.agent.value_function[self.env.state]
                     self.agent.policy[row, col, action] = reward + successor_state_value
 
-                max_policy_value = np.max(self.agent.policy[row, col, :])
+                max_policy_value = torch.max(self.agent.policy[row, col, :])
                 max_indices = [i for i, a in enumerate(self.agent.policy[row, col, :]) if a == max_policy_value]
                 for idx in max_indices:
                     self.agent.policy[row, col, idx] = 1
@@ -82,7 +82,7 @@ class Policy_iteration(object):
         value_delta_max = 0
         for _ in range(k):
             self.evaluate_policy(gamma=gamma, synchronous=synchronous)
-            value_delta = np.max(np.abs(self.agent.value_function_prev - self.agent.value_function))
+            value_delta = torch.max(torch.abs(self.agent.value_function_prev - self.agent.value_function))
             value_delta_max = value_delta
             if value_delta_max < eps:
                 break

@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 import pprint
 
 
@@ -17,7 +17,7 @@ class Temporal_difference_lambda(object):
         :return: finds the optimal move chess policy
         """
         for k in range(n_episodes):
-            self.agent.E = np.zeros(shape=self.agent.action_function.shape)
+            self.agent.E = torch.zeros(shape=self.agent.action_function.shape)
             state = (0, 0)
             self.env.state = state
             episode_end = False
@@ -82,7 +82,7 @@ class Temporal_difference_lambda(object):
         
 
     def TD_lambda(self, epsilon=0.1, alpha=0.05, gamma=0.9, max_steps=1000, lamb=0.9):
-        self.agent.E = np.zeros(self.agent.value_function.shape)
+        self.agent.E = torch.zeros(self.agent.value_function.shape)
         state = (0, 0)
         self.env.state = state
         states = []
