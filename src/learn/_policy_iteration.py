@@ -110,6 +110,7 @@ class Policy_iteration(object):
         """
         greedy_policy = self.agent.policy.argmax(axis=2)
         policy_visualization = {}
+
         if self.agent.piece == 'king':
             arrows = "↑ ↗ → ↘ ↓ ↙ ← ↖"
             visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
@@ -122,7 +123,9 @@ class Policy_iteration(object):
         elif self.agent.piece == 'rook':
             arrows = "↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ←"
             visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
+
         arrowlist = arrows.split(" ")
+
         for idx, arrow in enumerate(arrowlist):
             policy_visualization[idx] = arrow
         visual_board = []
@@ -131,7 +134,7 @@ class Policy_iteration(object):
 
         for row in range(greedy_policy.shape[0]):
             for col in range(greedy_policy.shape[1]):
-                idx = greedy_policy[row, col]
+                idx = greedy_policy[row, col].item()
 
                 visual_board[row][col] = policy_visualization[idx]
 
