@@ -5,7 +5,7 @@ class Board(object):
 
     def __init__(self):
         self.state = (0, 0)
-        self.reward_space = torch.zeros(shape=(8, 8)) - 1
+        self.reward_space = torch.zeros(((8, 8))) - 1
         self.terminal_state = (7, 5)
 
     def step(self, action):

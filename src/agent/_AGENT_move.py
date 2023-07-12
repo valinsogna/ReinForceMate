@@ -11,13 +11,13 @@ class Piece(object):
         """
         self.piece = piece
         self.init_actionspace()
-        self.value_function = torch.zeros(shape=(8, 8))
+        self.value_function = torch.zeros((8, 8))
         self.value_function_prev = self.value_function.copy()
-        self.N = torch.zeros(shape=(8, 8))
-        self.E = torch.zeros(shape=(8, 8))
+        self.N = torch.zeros((8, 8))
+        self.E = torch.zeros((8, 8))
         self.Returns = {}
-        self.action_function = torch.zeros(shape=(8, 8, len(self.action_space)))
-        self.policy = torch.zeros(shape=self.action_function.shape)
+        self.action_function = torch.zeros((8, 8, len(self.action_space)))
+        self.policy = torch.zeros(self.action_function.shape)
         self.policy_prev = self.policy.copy()
 
     def apply_policy(self, state, epsilon):
