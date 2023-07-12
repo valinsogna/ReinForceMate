@@ -17,7 +17,7 @@ class Temporal_difference_lambda(object):
         :return: finds the optimal move chess policy
         """
         for k in range(n_episodes):
-            self.agent.E = torch.zeros(shape=self.agent.action_function.shape)
+            self.agent.E = torch.zeros(self.agent.action_function.shape)
             state = (0, 0)
             self.env.state = state
             episode_end = False
@@ -42,7 +42,7 @@ class Temporal_difference_lambda(object):
                 state = successor_state
                 action = self.agent.action_space[successor_action_index]
                 action_index = successor_action_index
-                self.agent.policy = self.agent.action_function.copy()
+                self.agent.policy = self.agent.action_function.clone()
 
     def visualize_policy(self):
         """
@@ -73,7 +73,7 @@ class Temporal_difference_lambda(object):
 
         for row in range(greedy_policy.shape[0]):
             for col in range(greedy_policy.shape[1]):
-                idx = greedy_policy[row, col]
+                idx = greedy_policy[row, col].item()
 
                 visual_board[row][col] = policy_visualization[idx]
 

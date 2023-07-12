@@ -1,11 +1,43 @@
 import torch
 import pprint
-
+from statistics import mean
 
 class Monte_carlo(object):
     def __init__(self, agent, env):
         self.agent = agent
         self.env = env
+
+    def play_episode(self, state, max_steps=1e3, epsilon=0.1):
+        """
+        Play an episode of move chess
+        :param state: tuple describing the starting state on 8x8 matrix
+        :param max_steps: integer, maximum amount of steps before terminating the episode
+        :param epsilon: exploration parameter
+        :return: tuple of lists describing states, actions and rewards in a episode
+        """
+        self.env.state = state
+        states = []
+        actions = []
+        rewards = []
+        episode_end = False
+
+        # Play out an episode
+        count_steps = 0
+        while not episode_end:
+            count_steps += 1
+            states.append(state)
+            action_index = self.agent.apply_policy(state, epsilon)  # get the index of the next action
+            action = self.agent.action_space[action_index]
+            actions.append(action_index)
+            reward, episode_end = self.env.step(action)
+            state = self.env.state
+            rewards.append(reward)
+
+            #  avoid infinite loops
+            if count_steps > max_steps:
+                episode_end = True
+
+        return states, actions, rewards
 
     def monte_carlo_learning(self, epsilon=0.1):
         """
@@ -24,16 +56,16 @@ class Monte_carlo(object):
             action_index = actions[idx]
             if (state, action_index) in first_visits:
                 continue
-            r = torch.sum(rewards[idx:])
+            r = sum(rewards[idx:])
             if (state, action_index) in self.agent.Returns.keys():
                 self.agent.Returns[(state, action_index)].append(r)
             else:
                 self.agent.Returns[(state, action_index)] = [r]
             self.agent.action_function[state[0], state[1], action_index] = \
-                torch.mean(self.agent.Returns[(state, action_index)])
+                (sum(self.agent.Returns[(state, action_index)])/len(self.agent.Returns[(state, action_index)]))
             first_visits.append((state, action_index))
         # Update the policy. In Monte Carlo Control, this is greedy behavior with respect to the action function
-        self.agent.policy = self.agent.action_function.copy()
+        self.agent.policy = self.agent.action_function.clone()
 
     def monte_carlo_evaluation(self, epsilon=0.1, first_visit=True):
         """
@@ -96,7 +128,7 @@ class Monte_carlo(object):
 
         for row in range(greedy_policy.shape[0]):
             for col in range(greedy_policy.shape[1]):
-                idx = greedy_policy[row, col]
+                idx = greedy_policy[row, col].item()
 
                 visual_board[row][col] = policy_visualization[idx]
 

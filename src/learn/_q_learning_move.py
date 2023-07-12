@@ -39,7 +39,7 @@ class Q_learning_move(object):
                                                                                                  successor_action_value
                                                                                                  - action_value)
                 self.agent.action_function[state[0], state[1], action_index] = av_new
-                self.agent.policy = self.agent.action_function.copy()
+                self.agent.policy = self.agent.action_function.clone()
                 state = successor_state
 
 
@@ -72,7 +72,7 @@ class Q_learning_move(object):
 
         for row in range(greedy_policy.shape[0]):
             for col in range(greedy_policy.shape[1]):
-                idx = greedy_policy[row, col]
+                idx = greedy_policy[row, col].item()
 
                 visual_board[row][col] = policy_visualization[idx]
 

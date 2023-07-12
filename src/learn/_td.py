@@ -35,8 +35,8 @@ class Temporal_difference(object):
 
                 q_update = alpha * (reward + gamma * successor_action_value - action_value)
 
-                self.agent.action_function[state[0], state[1], action_index] += q_update
-                self.agent.policy = self.agent.action_function.copy()
+                self.agent.action_function[state[0], state[1], action_index] += q_update.item()
+                self.agent.policy = self.agent.action_function.clone()
 
 
     def visualize_policy(self):
@@ -68,7 +68,7 @@ class Temporal_difference(object):
 
         for row in range(greedy_policy.shape[0]):
             for col in range(greedy_policy.shape[1]):
-                idx = greedy_policy[row, col]
+                idx = greedy_policy[row, col].item()
 
                 visual_board[row][col] = policy_visualization[idx]
 
