@@ -79,3 +79,7 @@ class Q_learning_move(object):
         visual_board[self.env.terminal_state[0]][self.env.terminal_state[1]] = "F"
         pprint.pprint(visual_board)
         
+
+    def visualize_action_function(self):
+        # print(self.agent.action_function.max(axis=2).round().astype(int))
+        print(torch.max(self.agent.action_function, dim=2)[0].to(torch.int))

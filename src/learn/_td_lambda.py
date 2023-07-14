@@ -51,6 +51,7 @@ class Temporal_difference_lambda(object):
 
         """
         greedy_policy = self.agent.policy.argmax(axis=2)
+        # print(greedy_policy)
         policy_visualization = {}
         if self.agent.piece == 'king':
             arrows = "↑ ↗ → ↘ ↓ ↙ ← ↖"
@@ -79,7 +80,9 @@ class Temporal_difference_lambda(object):
 
         visual_board[self.env.terminal_state[0]][self.env.terminal_state[1]] = "F"
         pprint.pprint(visual_board)
-        
+
+    def visualize_action_function(self):
+        print(torch.max(self.agent.action_function, dim=2)[0].to(torch.int))
 
     def TD_lambda(self, epsilon=0.1, alpha=0.05, gamma=0.9, max_steps=1000, lamb=0.9):
         self.agent.E = torch.zeros(self.agent.value_function.shape)

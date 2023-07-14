@@ -6,7 +6,7 @@ class Board(object):
     def __init__(self):
         self.state = (0, 0)
         self.reward_space = torch.zeros(((8, 8))) - 1
-        self.terminal_state = (7, 5)
+        self.terminal_state = (6,7)#(7, 5)
 
     def step(self, action):
         reward = self.reward_space[self.state[0], self.state[1]]
@@ -21,7 +21,8 @@ class Board(object):
             return reward, episode_end
 
     def render(self):
-        visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
+        # visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
+        visual_row = [" ", " ", " ", " ", " ", " ", " ", " "]
         visual_board = []
         for c in range(8):
             visual_board.append(visual_row.copy())

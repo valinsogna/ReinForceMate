@@ -32,8 +32,9 @@ class Temporal_difference(object):
                 action_value = self.agent.action_function[state[0], state[1], action_index]
                 successor_action_value = self.agent.action_function[successor_state[0],
                                                                     successor_state[1], successor_action_index]
-
+                
                 q_update = alpha * (reward + gamma * successor_action_value - action_value)
+                
 
                 self.agent.action_function[state[0], state[1], action_index] += q_update.item()
                 self.agent.policy = self.agent.action_function.clone()
@@ -49,7 +50,8 @@ class Temporal_difference(object):
         policy_visualization = {}
         if self.agent.piece == 'king':
             arrows = "↑ ↗ → ↘ ↓ ↙ ← ↖"
-            visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
+            # visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
+            visual_row = [". ", ". ", ". ", ". ", ". ", ". ", ". ", ". "]
         elif self.agent.piece == 'knight':
             arrows = "↑↗ ↗→ →↘ ↓↘ ↙↓ ←↙ ←↖ ↖↑"
             visual_row = ["[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]"]
@@ -75,7 +77,10 @@ class Temporal_difference(object):
         visual_board[self.env.terminal_state[0]][self.env.terminal_state[1]] = "F"
         pprint.pprint(visual_board)
 
-
+    def visualize_action_function(self):
+        print("Value function for this policy:")
+        # print(torch.round(self.agent.policy).to(torch.int))#.argmax(axis=2))
+        print(torch.max(self.agent.action_function, dim=2)[0].to(torch.int))
     
     def TD_zero(self, epsilon=0.1, alpha=0.05, max_steps=1000, lamb=0.9):
         """
@@ -106,3 +111,4 @@ class Temporal_difference(object):
 
             if count_steps > max_steps:
                 episode_end = True
+        print(count_steps)
