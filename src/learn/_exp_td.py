@@ -7,14 +7,12 @@ class Temporal_difference(object):
         self.agent = agent
         self.env = env
 
-    
-    def sarsa_td(self, n_episodes=1000, alpha=0.01, gamma=0.9):
+    def expected_sarsa(self, n_episodes=1000, alpha=0.01, gamma=0.9):
         """
-        Run the sarsa control algorithm (TD0), finding the optimal policy and action function
-        :param n_episodes: int, amount of episodes to train
+        Run the Expected SARSA control algorithm, finding the optimal policy and action function
+        :param n_episodes: int, number of episodes to train
         :param alpha: learning rate
         :param gamma: discount factor of future rewards
-        :return: finds the optimal policy for move chess
         """
         for k in range(n_episodes):
             state = (0, 0)
@@ -27,29 +25,28 @@ class Temporal_difference(object):
                 action = self.agent.action_space[action_index]
                 reward, episode_end = self.env.step(action)
                 successor_state = self.env.state
-                successor_action_index = self.agent.apply_policy(successor_state, epsilon)
 
+                expected_action_value = torch.sum(
+                    self.agent.action_function[successor_state[0], successor_state[1]] * self.agent.policy[
+                        successor_state[0], successor_state[1]]
+                )
                 action_value = self.agent.action_function[state[0], state[1], action_index]
-                successor_action_value = self.agent.action_function[successor_state[0],
-                                                                    successor_state[1], successor_action_index]
-                
-                q_update = alpha * (reward + gamma * successor_action_value - action_value)
-                
+
+                q_update = alpha * (reward + gamma * expected_action_value - action_value)
 
                 self.agent.action_function[state[0], state[1], action_index] += q_update.item()
-                self.agent.policy = self.agent.action_function.clone()
 
+                # Update the policy based on the updated action function
+                self.agent.policy = torch.softmax(self.agent.action_function, dim=2)
 
     def visualize_policy(self):
         """
         Returns: None
-
         """
         greedy_policy = self.agent.policy.argmax(axis=2)
         policy_visualization = {}
         if self.agent.piece == 'king':
             arrows = "↑ ↗ → ↘ ↓ ↙ ← ↖"
-            # visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
             visual_row = [". ", ". ", ". ", ". ", ". ", ". ", ". ", ". "]
         elif self.agent.piece == 'knight':
             arrows = "↑↗ ↗→ →↘ ↓↘ ↙↓ ←↙ ←↖ ↖↑"
@@ -64,13 +61,12 @@ class Temporal_difference(object):
         for idx, arrow in enumerate(arrowlist):
             policy_visualization[idx] = arrow
         visual_board = []
-        for c in range(8):
+        for _ in range(8):
             visual_board.append(visual_row.copy())
 
         for row in range(greedy_policy.shape[0]):
             for col in range(greedy_policy.shape[1]):
                 idx = greedy_policy[row, col].item()
-
                 visual_board[row][col] = policy_visualization[idx]
 
         visual_board[self.env.terminal_state[0]][self.env.terminal_state[1]] = "F"
@@ -78,36 +74,5 @@ class Temporal_difference(object):
 
     def visualize_action_function(self):
         print("Value function for this policy:")
-        # print(torch.round(self.agent.policy).to(torch.int))#.argmax(axis=2))
         print(torch.max(self.agent.action_function, dim=2)[0].to(torch.int))
-    
-    def TD_zero(self, epsilon=0.1, alpha=0.05, max_steps=1000, lamb=0.9):
-        """
-        Find the value function of move chess states
-        :param epsilon: exploration rate
-        :param alpha: learning rate
-        :param max_steps: max amount of steps in an episode
-        """
-        state = (0, 0)
-        self.env.state = state
-        states = []
-        actions = []
-        rewards = []
-        episode_end = False
-        count_steps = 0
-        while not episode_end:
-            count_steps += 1
-            states.append(state)
-            action_index = self.agent.apply_policy(state, epsilon=epsilon)
-            action = self.agent.action_space[action_index]
-            actions.append(action)
-            reward, episode_end = self.env.step(action)
-            suc_state = self.env.state
-            self.agent.value_function[state[0], state[1]] = self.agent.value_function[state[0], state[1]] + alpha * (
-                    reward + lamb * self.agent.value_function[suc_state[0], suc_state[1]] - self.agent.value_function[
-                state[0], state[1]])
-            state = self.env.state
 
-            if count_steps > max_steps:
-                episode_end = True
-        print(count_steps)
