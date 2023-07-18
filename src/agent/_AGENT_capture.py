@@ -8,7 +8,7 @@ Which actions are legal in a certain state is part of the environment (in RL, an
 the control of the agent is considered part of the environment). 
 We can use the python-chess package to select legal moves.
 """
-
+import copy
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -140,8 +140,20 @@ class Agent(nn.Module):
 
     def fix_model(self):
         """
-        Update the target model with the current model parameters
+        Create a fixed model for bootstrapping
         """
-        pass  # Implement this if you want to use a target network in Q-learning
+        optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=0.0, weight_decay=0.0, nesterov=False)
+        self.fixed_model = copy.deepcopy(self)
+        self.fixed_model.optimizer = optimizer
+
+    # def fix_model(self):
+    #     """
+    #     Create a fixed model for bootstrapping
+    #     """
+    #     optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=0.0, weight_decay=0.0, nesterov=False)
+    #     self.fixed_model = Agent(network=self.network, gamma=self.gamma, lr=self.lr, verbose=self.verbose)
+    #     self.fixed_model.load_state_dict(self.state_dict())
+    #     self.fixed_model.optimizer = optimizer
+
 
 
