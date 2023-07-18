@@ -28,6 +28,7 @@ class Temporal_difference(object):
                 state = self.env.state
                 action_index = self.agent.apply_policy(state, epsilon)
                 action = self.agent.action_space[action_index]
+
                 reward, episode_end = self.env.step(action)
                 reward_step.append(reward)
 
@@ -66,6 +67,7 @@ class Temporal_difference(object):
             state = self.env.state
             action_index = self.agent.apply_policy(state, epsilon)
             action = self.agent.action_space[action_index]
+            
             reward, episode_end = self.env.step(action)
             reward_step.append(reward)
 

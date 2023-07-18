@@ -6,6 +6,7 @@ class Policy_iteration(object):
     def __init__(self, agent, env):
         self.agent = agent
         self.env = env
+        self.cumulative_rewards = []
         
     def evaluate_state(self, state, gamma=0.9, synchronous=True):
         """
@@ -38,16 +39,22 @@ class Policy_iteration(object):
         return state_value
 
     def evaluate_policy(self, gamma=0.9, synchronous=True):
+
         self.agent.value_function_prev = self.agent.value_function.clone()  # For synchronous updates
         for row in range(self.agent.value_function.shape[0]):
             for col in range(self.agent.value_function.shape[1]):
                 self.agent.value_function[row, col] = self.evaluate_state((row, col), gamma=gamma,
                                                                           synchronous=synchronous)
 
+
+
+
     def improve_policy(self):
         """
         Finds the greedy policy w.r.t. the current value function
         """
+
+        rewards = 0
 
         self.agent.policy_prev = self.agent.policy.clone()
         for row in range(self.agent.action_function.shape[0]):
@@ -55,6 +62,8 @@ class Policy_iteration(object):
                 for action in range(self.agent.action_function.shape[2]):
                     self.env.state = (row, col)  # reset state to the one being evaluated
                     reward, episode_end = self.env.step(self.agent.action_space[action])
+                    rewards += reward
+
                     successor_state_value = 0 if episode_end else self.agent.value_function[self.env.state]
                     self.agent.policy[row, col, action] = reward + successor_state_value
 
@@ -62,6 +71,10 @@ class Policy_iteration(object):
                 max_indices = [i for i, a in enumerate(self.agent.policy[row, col, :]) if a == max_policy_value]
                 for idx in max_indices:
                     self.agent.policy[row, col, idx] = 1
+        
+        return rewards
+
+
 
     def policy_iteration(self, eps=0.1, gamma=0.9, iteration=1, k=32, synchronous=True):
         """
@@ -89,8 +102,8 @@ class Policy_iteration(object):
             value_delta_max = value_delta
             if value_delta_max < eps:
                 break
-        print("Value function for this policy:")
-        print(torch.round(self.agent.value_function).to(torch.int))
+        # print("Value function for this policy:")
+        # print(torch.round(self.agent.value_function).to(torch.int))
         action_function_prev = self.agent.action_function.clone()
         # print("\n Improving policy:")
         self.improve_policy()
@@ -99,49 +112,42 @@ class Policy_iteration(object):
 
         if not policy_stable and iteration < 1000:
             iteration += 1
+            # print(self.calculate_cumulative_rewards())
             self.policy_iteration(iteration=iteration)
         elif policy_stable:
             print("Optimal policy found in", iteration, "steps of policy evaluation")
+            # print(self.calculate_cumulative_rewards())
         else:
             print("failed to converge.")
 
 
 
+    def calculate_cumulative_rewards(self, num_episodes=10):
 
-    def run_episode(self, episode_number, eps=0.1, gamma=0.9, iteration=1, k=32, synchronous=True):
-        """
-        Finds the optimal policy
-        Args:
-            eps: float, exploration rate
-            gamma: float, discount factor
-            iteration: the iteration number
-            k: (int) maximum amount of policy evaluation iterations
-            synchronous: (Boolean) whether to use synchronous are asynchronous back-ups 
+        for k in range(num_episodes):
+            self.env.reset()
+            episode_reward = 0
+            episode_end = False
+            iteration = 0
+            while not episode_end:
+                iteration += 1
+                state = self.env.state
+                action_index = self.agent.apply_policy(state, epsilon=0) # no exploration (greedy)
+                action = self.agent.action_space[action_index]
+                reward, episode_end = self.env.step(action)
+                episode_reward += reward
+            self.cumulative_rewards.append(episode_reward)
 
-        Returns:
+        return self.cumulative_rewards
 
-        """
-        policy_stable = True
-        # print("\n\n______iteration:", iteration, "______")
-        # print("\n policy:")
-        # self.visualize_policy()
 
-        print("")
-        value_delta_max = 0
-        for _ in range(k):
-            self.evaluate_policy(gamma=gamma, synchronous=synchronous)
-            value_delta = torch.max(torch.abs(self.agent.value_function_prev - self.agent.value_function))
-            value_delta_max = value_delta
-            if value_delta_max < eps:
-                break
-        print("Value function for this policy:")
-        print(torch.round(self.agent.value_function).to(torch.int))
-        action_function_prev = self.agent.action_function.clone()
-        # print("\n Improving policy:")
+
+
+    def run_episode(self, eps=0.1, gamma=0.9, iteration=1, k=32, synchronous=True):
+        
+        self.evaluate_policy(gamma=gamma,synchronous=synchronous)
         self.improve_policy()
-        policy_stable = self.agent.compare_policies() < 1
-        # print("policy diff:", policy_stable)
-
+        return self.calculate_cumulative_rewards()
 
 
 

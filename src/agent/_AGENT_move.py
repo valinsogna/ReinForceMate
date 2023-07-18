@@ -34,14 +34,15 @@ class Piece(object):
         greedy_action_value = torch.max(self.policy[state[0], state[1], :])
         greedy_indices = [i for i, a in enumerate(self.policy[state[0], state[1], :]) if
                           a == greedy_action_value]
-        # action_index = np.random.choice(greedy_indices)
         action_index = greedy_indices[torch.randint(0, len(greedy_indices), size=(1,))]
         if torch.rand(1) < epsilon:
             action_index = torch.randint(0, len(self.action_space), size=(1,))
         return action_index
 
+
     def compare_policies(self):
         return torch.sum(torch.abs(self.policy - self.policy_prev))
+
 
     def init_actionspace(self):
         assert self.piece in ["king", "rook", "bishop",
@@ -79,3 +80,8 @@ class Piece(object):
                 self.action_space.append((amplitude, amplitude))  # south-west
                 self.action_space.append((amplitude, -amplitude))  # south-east
                 self.action_space.append((-amplitude, -amplitude))  # north
+
+
+    def get_action(self, state):
+        return self.apply_policy(state, epsilon=0)  # Use greedy policy (epsilon=0) to select the action
+

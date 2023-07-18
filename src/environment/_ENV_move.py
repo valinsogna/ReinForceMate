@@ -29,3 +29,11 @@ class Board(object):
         visual_board[self.state[0]][self.state[1]] = "[S]"
         visual_board[self.terminal_state[0]][self.terminal_state[1]] = "[F]"
         self.visual_board = visual_board
+
+
+    def reset(self):
+        self.state = (0, 0)
+        return self.state
+    
+    def get_state(self):
+        return self.state
