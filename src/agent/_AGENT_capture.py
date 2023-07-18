@@ -119,3 +119,5 @@ class Agent(object):
         loss = self.loss_fn(output, targets, train_returns.unsqueeze(1))
         loss.backward()
         self.optimizer.step()
+
+        return td_errors.detach().numpy()
