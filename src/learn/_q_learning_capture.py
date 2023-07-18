@@ -3,7 +3,7 @@ from torch.distributions import Categorical
 from chess.pgn import Game
 import pandas as pd
 
-class Q_learning(object):
+class Q_learning_capture(object):
 
     def __init__(self, agent, env, memsize=1000):
         """
