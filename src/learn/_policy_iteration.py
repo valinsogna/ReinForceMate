@@ -18,6 +18,7 @@ class Policy_iteration(object):
         Returns: The expected value of the state under the current policy.
 
         """
+
         greedy_action_value = torch.max(self.agent.policy[state[0], state[1], :])
         greedy_indices = [i for i, a in enumerate(self.agent.policy[state[0], state[1], :]) if
                           a == greedy_action_value]  # List of all greedy actions
@@ -26,6 +27,8 @@ class Policy_iteration(object):
         for i in greedy_indices:
             self.env.state = state  # reset state to the one being evaluated
             reward, episode_end = self.env.step(self.agent.action_space[i])
+
+
             if synchronous:
                 successor_state_value = self.agent.value_function_prev[self.env.state]
             else:
@@ -101,6 +104,50 @@ class Policy_iteration(object):
             print("Optimal policy found in", iteration, "steps of policy evaluation")
         else:
             print("failed to converge.")
+
+
+
+
+    def run_episode(self, episode_number, eps=0.1, gamma=0.9, iteration=1, k=32, synchronous=True):
+        """
+        Finds the optimal policy
+        Args:
+            eps: float, exploration rate
+            gamma: float, discount factor
+            iteration: the iteration number
+            k: (int) maximum amount of policy evaluation iterations
+            synchronous: (Boolean) whether to use synchronous are asynchronous back-ups 
+
+        Returns:
+
+        """
+        policy_stable = True
+        # print("\n\n______iteration:", iteration, "______")
+        # print("\n policy:")
+        # self.visualize_policy()
+
+        print("")
+        value_delta_max = 0
+        for _ in range(k):
+            self.evaluate_policy(gamma=gamma, synchronous=synchronous)
+            value_delta = torch.max(torch.abs(self.agent.value_function_prev - self.agent.value_function))
+            value_delta_max = value_delta
+            if value_delta_max < eps:
+                break
+        print("Value function for this policy:")
+        print(torch.round(self.agent.value_function).to(torch.int))
+        action_function_prev = self.agent.action_function.clone()
+        # print("\n Improving policy:")
+        self.improve_policy()
+        policy_stable = self.agent.compare_policies() < 1
+        # print("policy diff:", policy_stable)
+
+
+
+
+
+
+
 
     def visualize_policy(self):
         """

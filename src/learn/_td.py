@@ -16,16 +16,21 @@ class Temporal_difference(object):
         :param gamma: discount factor of future rewards
         :return: finds the optimal policy for move chess
         """
+        cumulative_reward = []
         for k in range(n_episodes):
             state = (0, 0)
             self.env.state = state
             episode_end = False
             epsilon = max(1 / (1 + k), 0.05)
+            reward_step = []
             while not episode_end:
+
                 state = self.env.state
                 action_index = self.agent.apply_policy(state, epsilon)
                 action = self.agent.action_space[action_index]
                 reward, episode_end = self.env.step(action)
+                reward_step.append(reward)
+
                 successor_state = self.env.state
                 successor_action_index = self.agent.apply_policy(successor_state, epsilon)
 
@@ -38,6 +43,48 @@ class Temporal_difference(object):
 
                 self.agent.action_function[state[0], state[1], action_index] += q_update.item()
                 self.agent.policy = self.agent.action_function.clone()
+                
+            cumulative_reward.append(sum(reward_step))
+        return cumulative_reward
+    
+
+    def run_episode(self, episode_number, alpha=0.01, gamma=0.9):
+        """
+        Run the sarsa control algorithm (TD0), finding the optimal policy and action function
+        :param n_episodes: int, amount of episodes to train
+        :param alpha: learning rate
+        :param gamma: discount factor of future rewards
+        :return: finds the optimal policy for move chess
+        """
+        state = (0, 0)
+        self.env.state = state
+        episode_end = False
+        epsilon = max(1 / (1 + episode_number), 0.05)
+        reward_step = []
+        while not episode_end:
+
+            state = self.env.state
+            action_index = self.agent.apply_policy(state, epsilon)
+            action = self.agent.action_space[action_index]
+            reward, episode_end = self.env.step(action)
+            reward_step.append(reward)
+
+            successor_state = self.env.state
+            successor_action_index = self.agent.apply_policy(successor_state, epsilon)
+
+            action_value = self.agent.action_function[state[0], state[1], action_index]
+            successor_action_value = self.agent.action_function[successor_state[0],
+                                                                successor_state[1], successor_action_index]
+            
+            q_update = alpha * (reward + gamma * successor_action_value - action_value)
+            
+
+            self.agent.action_function[state[0], state[1], action_index] += q_update.item()
+            self.agent.policy = self.agent.action_function.clone()
+        
+        return sum(reward_step)
+            
+    
 
 
     def visualize_policy(self):
@@ -77,6 +124,12 @@ class Temporal_difference(object):
         pprint.pprint(visual_board)
 
     def visualize_action_function(self):
+        """
+        prints the action function for the current policy
+        The action function is the expected reward for each action in each state
+        Returns: None
+
+        """
         print("Value function for this policy:")
         # print(torch.round(self.agent.policy).to(torch.int))#.argmax(axis=2))
         print(torch.max(self.agent.action_function, dim=2)[0].to(torch.int))

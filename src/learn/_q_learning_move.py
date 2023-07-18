@@ -43,6 +43,46 @@ class Q_learning_move(object):
                 state = successor_state
 
 
+    def run_episode(self, episode_number, alpha=0.05, gamma=0.9):
+        """
+        Run Q-learning (also known as sarsa-max, finding the optimal policy and value function
+        :param n_episodes: int, amount of episodes to train
+        :param alpha: learning rate
+        :param gamma: discount factor of future rewards
+        :return: finds the optimal move chess policy
+        """
+        reward_step = []
+        state = (0, 0)
+        self.env.state = state
+        episode_end = False
+        epsilon = max(1 / (episode_number + 1), 0.1)
+        while not episode_end:
+            action_index = self.agent.apply_policy(state, epsilon)
+            action = self.agent.action_space[action_index]
+            reward, episode_end = self.env.step(action)
+            reward_step.append(reward)
+            successor_state = self.env.state
+            successor_action_index = self.agent.apply_policy(successor_state, -1)
+
+            action_value = self.agent.action_function[state[0], state[1], action_index]
+            if not episode_end:
+                successor_action_value = self.agent.action_function[successor_state[0],
+                                                                    successor_state[1], successor_action_index]
+            else:
+                successor_action_value = 0
+
+            av_new = self.agent.action_function[state[0], state[1], action_index] + alpha * (reward +
+                                                                                                gamma *
+                                                                                                successor_action_value
+                                                                                                - action_value)
+            self.agent.action_function[state[0], state[1], action_index] = av_new
+            self.agent.policy = self.agent.action_function.clone()
+            state = successor_state
+
+        return sum(reward_step)
+
+
+
     def visualize_policy(self):
         """
         Gives you are very ugly visualization of the policy

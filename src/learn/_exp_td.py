@@ -39,6 +39,43 @@ class Expected_temporal_difference(object):
                 # Update the policy based on the updated action function
                 self.agent.policy = torch.softmax(self.agent.action_function, dim=2)
 
+
+    def run_episode(self, episode_number, alpha=0.01, gamma=0.9):
+        """
+        Run the Expected SARSA control algorithm, finding the optimal policy and action function
+        :param n_episodes: int, number of episodes to train
+        :param alpha: learning rate
+        :param gamma: discount factor of future rewards
+        """
+
+        reward_step = []
+        state = (0, 0)
+        self.env.state = state
+        episode_end = False
+        epsilon = max(1 / (1 + episode_number), 0.05)
+        while not episode_end:
+            state = self.env.state
+            action_index = self.agent.apply_policy(state, epsilon)
+            action = self.agent.action_space[action_index]
+            reward, episode_end = self.env.step(action)
+            reward_step.append(reward)
+            successor_state = self.env.state
+
+            expected_action_value = torch.sum(
+                self.agent.action_function[successor_state[0], successor_state[1]] * self.agent.policy[
+                    successor_state[0], successor_state[1]]
+            )
+            action_value = self.agent.action_function[state[0], state[1], action_index]
+
+            q_update = alpha * (reward + gamma * expected_action_value - action_value)
+
+            self.agent.action_function[state[0], state[1], action_index] += q_update.item()
+
+            # Update the policy based on the updated action function
+            self.agent.policy = torch.softmax(self.agent.action_function, dim=2)
+
+        return sum(reward_step)
+
     def visualize_policy(self):
         """
         Returns: None

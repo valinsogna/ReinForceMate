@@ -44,6 +44,48 @@ class Temporal_difference_lambda(object):
                 action_index = successor_action_index
                 self.agent.policy = self.agent.action_function.clone()
 
+    def run_episode(self, episode_number, alpha=0.05, gamma=0.9, lamb=0.8):
+        """
+        Run the sarsa control algorithm (TD lambda), finding the optimal policy and action function
+        :param n_episodes: int, amount of episodes to train
+        :param alpha: learning rate
+        :param gamma: discount factor of future rewards
+        :param lamb: lambda parameter describing the decay over n-step returns
+        :return: finds the optimal move chess policy
+        """
+        reward_step = []
+        self.agent.E = torch.zeros(self.agent.action_function.shape)
+        state = (0, 0)
+        self.env.state = state
+        episode_end = False
+        epsilon = max(1 / (1 + episode_number), 0.2)
+        action_index = self.agent.apply_policy(state, epsilon)
+        action = self.agent.action_space[action_index]
+        while not episode_end:
+            reward, episode_end = self.env.step(action)
+            reward_step.append(reward)
+            successor_state = self.env.state
+            successor_action_index = self.agent.apply_policy(successor_state, epsilon)
+
+            action_value = self.agent.action_function[state[0], state[1], action_index]
+            if not episode_end:
+                successor_action_value = self.agent.action_function[successor_state[0],
+                                                                    successor_state[1], successor_action_index]
+            else:
+                successor_action_value = 0
+            delta = reward + gamma * successor_action_value - action_value
+            self.agent.E[state[0], state[1], action_index] += 1
+            self.agent.action_function = self.agent.action_function + alpha * delta * self.agent.E
+            self.agent.E = gamma * lamb * self.agent.E
+            state = successor_state
+            action = self.agent.action_space[successor_action_index]
+            action_index = successor_action_index
+            self.agent.policy = self.agent.action_function.clone()
+
+        return sum(reward_step)
+    
+    
+
     def visualize_policy(self):
         """
         Gives you are very ugly visualization of the policy
