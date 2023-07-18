@@ -2,7 +2,7 @@ import torch
 import pprint
 
 
-class Temporal_difference(object):
+class Expected_temporal_difference(object):
     def __init__(self, agent, env):
         self.agent = agent
         self.env = env

@@ -74,9 +74,9 @@ class Policy_iteration(object):
 
         """
         policy_stable = True
-        print("\n\n______iteration:", iteration, "______")
-        print("\n policy:")
-        self.visualize_policy()
+        # print("\n\n______iteration:", iteration, "______")
+        # print("\n policy:")
+        # self.visualize_policy()
 
         print("")
         value_delta_max = 0
@@ -89,10 +89,10 @@ class Policy_iteration(object):
         print("Value function for this policy:")
         print(torch.round(self.agent.value_function).to(torch.int))
         action_function_prev = self.agent.action_function.clone()
-        print("\n Improving policy:")
+        # print("\n Improving policy:")
         self.improve_policy()
         policy_stable = self.agent.compare_policies() < 1
-        print("policy diff:", policy_stable)
+        # print("policy diff:", policy_stable)
 
         if not policy_stable and iteration < 1000:
             iteration += 1
