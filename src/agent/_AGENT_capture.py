@@ -1,16 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
+import torch.nn.functional as F
 
-def policy_gradient_loss(Returns):
-    def modified_crossentropy(action_probs, action):
-        cost = (torch.nn.functional.cross_entropy(action_probs, action, reduction='none') * Returns)
-        return torch.mean(cost)
+class PolicyGradientLoss(nn.Module):
+    def __init__(self):
+        super(PolicyGradientLoss, self).__init__()
 
-    return modified_crossentropy
+    def forward(self, action, action_probs, Returns):
+        cost = (F.cross_entropy(action_probs, action, reduction='none') * Returns)
+        return cost.mean()
 
-class Agent:
+class Agent(object):
     def __init__(self, gamma=0.5, network='linear', lr=0.01, verbose=0):
         self.gamma = gamma
         self.network = network
@@ -29,17 +30,19 @@ class Agent:
             self.init_conv_pg()
 
     def fix_model(self):
-        self.fixed_model = self.model.clone()
+        self.fixed_model = nn.Sequential(*list(self.model.children()))
+        self.fixed_model.load_state_dict(self.model.state_dict())
 
     def init_linear_network(self):
         self.model = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(8*8*8, 4096)
+            nn.Linear(8 * 8 * 8, 4096)
         )
         self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr)
 
     def init_conv_network(self):
         self.model = nn.Sequential(
+            nn.Conv2d(8, 1, kernel_size=1),
             nn.Conv2d(8, 1, kernel_size=1),
             nn.Flatten(),
             nn.Linear(64, 4096)
@@ -49,40 +52,45 @@ class Agent:
     def init_conv_pg(self):
         self.model = nn.Sequential(
             nn.Conv2d(8, 1, kernel_size=1),
+            nn.Conv2d(8, 1, kernel_size=1),
             nn.Flatten(),
             nn.Linear(64, 4096),
             nn.Softmax(dim=1)
         )
         self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr)
+        self.loss_fn = PolicyGradientLoss()
 
     def network_update(self, minibatch):
-        states, moves, rewards, new_states = zip(*minibatch)
+        states, moves, rewards, new_states = [], [], [], []
+        td_errors = []
+        episode_ends = []
+        for sample in minibatch:
+            states.append(sample[0])
+            moves.append(sample[1])
+            rewards.append(sample[2])
+            new_states.append(sample[3])
 
-        states = torch.stack(states)
-        moves = torch.tensor(moves)
-        rewards = torch.tensor(rewards)
-        new_states = torch.stack(new_states)
+            if torch.equal(sample[3], sample[3] * 0):
+                episode_ends.append(0)
+            else:
+                episode_ends.append(1)
 
-        q_target = rewards + self.gamma * self.fixed_model(new_states).max(dim=1).values
+        q_target = torch.tensor(rewards) + torch.tensor(episode_ends) * self.gamma * torch.max(
+            self.fixed_model(torch.stack(new_states)).detach(), dim=1).values
 
-        q_state = self.model(states)
-        q_state = q_state.view(len(minibatch), 64, 64)
-
-        td_errors = q_state.gather(1, moves.unsqueeze(1)).squeeze(1) - q_target
-        q_state.scatter_(1, moves.unsqueeze(1), q_target.unsqueeze(1))
-
-        q_state = q_state.view(len(minibatch), 4096)
-
+        q_state = self.model(torch.stack(states))
+        td_errors = q_state[range(len(moves)), moves[:, 0], moves[:, 1]] - q_target
+        q_state[range(len(moves)), moves[:, 0], moves[:, 1]] = q_target
         self.optimizer.zero_grad()
-        loss = nn.MSELoss()(self.model(states), q_state)
+        loss = F.mse_loss(q_state, q_state.detach())
         loss.backward()
         self.optimizer.step()
 
         return td_errors.detach().numpy()
 
     def get_action_values(self, state):
-        state = torch.unsqueeze(state, 0)
-        return self.fixed_model(state).detach().numpy() + np.random.randn() * 1e-9
+        with torch.no_grad():
+            return self.fixed_model(state) + torch.randn_like(self.fixed_model(state)) * 1e-9
 
     def policy_gradient_update(self, states, actions, rewards, action_spaces, actor_critic=False):
         n_steps = len(states)
@@ -92,122 +100,22 @@ class Agent:
             action = actions[t]
             targets[t, action[0], action[1]] = 1
             if actor_critic:
-                R = rewards[t][action[0] * 64 + action[1]]
+                R = rewards[t, action[0] * 64 + action[1]]
             else:
-                R = np.sum([r * self.gamma ** i for i, r in enumerate(rewards[t:])])
+                R = torch.sum(torch.tensor([r * self.gamma ** i for i, r in enumerate(rewards[t:])]))
             Returns.append(R)
 
         if not actor_critic:
-            mean_return = np.mean(Returns)
+            mean_return = torch.mean(torch.stack(Returns))        
             self.long_term_mean.append(mean_return)
-            train_returns = np.stack(Returns, axis=0) - np.mean(self.long_term_mean)
+            train_returns = torch.stack(Returns) - torch.mean(torch.stack(self.long_term_mean))
         else:
-            train_returns = np.stack(Returns, axis=0)
-
-        targets = targets.view(n_steps, 4096)
-
+            train_returns = torch.stack(Returns)
+        
+        targets = targets.view(n_steps, -1)
         self.weight_memory.append(self.model.state_dict())
         self.optimizer.zero_grad()
-        loss = policy_gradient_loss(torch.tensor(train_returns))(self.model(states), targets)
+        output = self.model(torch.stack(states))
+        loss = self.loss_fn(output, targets, train_returns.unsqueeze(1))
         loss.backward()
         self.optimizer.step()
-
-## This is an optimized version of the above class
-# import torch
-# import torch.nn as nn
-# import torch.optim as optim
-# import numpy as np
-
-
-# def policy_gradient_loss(Returns):
-#     def modified_crossentropy(action_probs, action):
-#         cost = (nn.functional.cross_entropy(action_probs, action, reduction='none') * Returns)
-#         return torch.mean(cost)
-
-#     return modified_crossentropy
-
-
-# class Agent:
-#     def __init__(self, gamma=0.5, network='linear', lr=0.01, verbose=0):
-#         self.gamma = gamma
-#         self.network = network
-#         self.lr = lr
-#         self.verbose = verbose
-#         self.init_network()
-#         self.init_target_network()
-#         self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr)
-
-#     def init_network(self):
-#         if self.network == 'linear':
-#             self.model = nn.Linear(8 * 8 * 8, 4096)
-#         elif self.network == 'conv':
-#             self.model = nn.Sequential(
-#                 nn.Conv2d(8, 1, kernel_size=1),
-#                 nn.Flatten(),
-#                 nn.Linear(64, 4096)
-#             )
-#         elif self.network == 'conv_pg':
-#             self.model = nn.Sequential(
-#                 nn.Conv2d(8, 1, kernel_size=1),
-#                 nn.Flatten(),
-#                 nn.Linear(64, 4096),
-#                 nn.Softmax(dim=1)
-#             )
-
-#     def init_target_network(self):
-#         self.target_model = self.model.clone().eval()
-
-#     def network_update(self, minibatch):
-#         states, moves, rewards, new_states = zip(*minibatch)
-
-#         states = torch.stack(states)
-#         moves = torch.tensor(moves)
-#         rewards = torch.tensor(rewards)
-#         new_states = torch.stack(new_states)
-
-#         q_target = rewards + self.gamma * self.target_model(new_states).max(dim=1).values
-
-#         q_state = self.model(states)
-#         q_state = q_state.view(len(minibatch), 64, 64)
-
-#         td_errors = q_state.gather(1, moves.unsqueeze(1)).squeeze(1) - q_target
-
-#         q_state.scatter_(1, moves.unsqueeze(1), q_target.unsqueeze(1))
-#         q_state = q_state.view(len(minibatch), 4096)
-
-#         self.optimizer.zero_grad()
-#         loss = nn.MSELoss()(self.model(states), q_state)
-#         loss.backward()
-#         self.optimizer.step()
-
-#         return td_errors.detach().numpy()
-
-#     def get_action_values(self, state):
-#         state = torch.unsqueeze(state, 0)
-#         return self.target_model(state).detach().cpu().numpy() + np.random.randn() * 1e-9
-
-#     def policy_gradient_update(self, states, actions, rewards, action_spaces, actor_critic=False):
-#         n_steps = len(states)
-#         Returns = []
-#         targets = torch.zeros((n_steps, 64, 64))
-#         for t in range(n_steps):
-#             action = actions[t]
-#             targets[t, action[0], action[1]] = 1
-#             if actor_critic:
-#                 R = rewards[t][action[0] * 64 + action[1]]
-#             else:
-#                 R = np.sum([r * self.gamma ** i for i, r in enumerate(rewards[t:])])
-#             Returns.append(R)
-
-#         if not actor_critic:
-#             mean_return = np.mean(Returns)
-#             train_returns = np.stack(Returns, axis=0) - mean_return
-#         else:
-#             train_returns = np.stack(Returns, axis=0)
-
-#         targets = targets.view(n_steps, 4096)
-
-#         self.optimizer.zero_grad()
-#         loss = policy_gradient_loss(torch.tensor(train_returns))(self.model(states), targets)
-#         loss.backward()
-#         self.optimizer.step()
