@@ -34,13 +34,15 @@ class Q_learning(object):
             pgn string describing final game
 
         """
-        for k in range(iters):
-            if k % c == 0:
-                print("iter", k)
-                self.agent.fix_model()
-            greedy = True if k == iters - 1 else False
-            self.env.reset()
-            self.play_game(k, greedy=greedy)
+        with open(os.devnull, 'w') as devnull:
+            with contextlib.redirect_stdout(devnull):
+                for k in range(iters):
+                    if k % c == 0:
+                        print("iter", k)
+                        self.agent.fix_model()
+                    greedy = True if k == iters - 1 else False
+                    self.env.reset()
+                    self.play_game(k, greedy=greedy)
 
         pgn = Game.from_board(self.env.board)
         reward_smooth = pd.DataFrame(self.reward_trace)
