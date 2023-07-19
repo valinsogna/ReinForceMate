@@ -44,7 +44,7 @@ class Temporal_difference_lambda(object):
                 action_index = successor_action_index
                 self.agent.policy = self.agent.action_function.clone()
 
-    def run_episode(self, episode_number, alpha=0.05, gamma=0.9, lamb=0.8):
+    def run_episode(self, episode_number, alpha=0.2, gamma=0.9, lamb=0.8):
         """
         Run the sarsa control algorithm (TD lambda), finding the optimal policy and action function
         :param n_episodes: int, amount of episodes to train

@@ -40,7 +40,7 @@ class Expected_temporal_difference(object):
                 self.agent.policy = torch.softmax(self.agent.action_function, dim=2)
 
 
-    def run_episode(self, episode_number, alpha=0.01, gamma=0.9):
+    def run_episode(self, episode_number, alpha=0.2, gamma=0.9):
         """
         Run the Expected SARSA control algorithm, finding the optimal policy and action function
         :param n_episodes: int, number of episodes to train

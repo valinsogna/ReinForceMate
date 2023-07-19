@@ -59,7 +59,7 @@ class Q_learning_move(object):
 
 
     """
-    def run_episode(self, episode_number, alpha=0.05, gamma=0.9):
+    def run_episode(self, episode_number, alpha=0.2, gamma=0.9):
         """
         Run Q-learning (also known as sarsa-max, finding the optimal policy and value function
         :param n_episodes: int, amount of episodes to train

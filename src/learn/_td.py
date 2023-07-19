@@ -49,7 +49,7 @@ class Temporal_difference(object):
         return cumulative_reward
     
 
-    def run_episode(self, episode_number, alpha=0.01, gamma=0.9):
+    def run_episode(self, episode_number, alpha=0.2, gamma=0.9):
         """
         Run the sarsa control algorithm (TD0), finding the optimal policy and action function
         :param n_episodes: int, amount of episodes to train
