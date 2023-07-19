@@ -122,7 +122,7 @@ class Policy_iteration(object):
 
 
 
-    def calculate_cumulative_rewards(self, num_episodes=10):
+    def calculate_cumulative_rewards(self, num_episodes=1):
 
         for k in range(num_episodes):
             self.env.reset()
@@ -193,3 +193,7 @@ class Policy_iteration(object):
 
         visual_board[self.env.terminal_state[0]][self.env.terminal_state[1]] = "F"
         pprint.pprint(visual_board)
+
+
+    def visualize_action_function(self):
+        print(torch.round(self.agent.value_function).to(torch.int))

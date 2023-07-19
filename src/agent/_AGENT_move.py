@@ -79,7 +79,7 @@ class Piece(object):
                 self.action_space.append((-amplitude, amplitude))  # north-west
                 self.action_space.append((amplitude, amplitude))  # south-west
                 self.action_space.append((amplitude, -amplitude))  # south-east
-                self.action_space.append((-amplitude, -amplitude))  # north
+                self.action_space.append((-amplitude, -amplitude))  # north-east
 
 
     def get_action(self, state):

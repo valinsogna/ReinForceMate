@@ -43,6 +43,22 @@ class Q_learning_move(object):
                 state = successor_state
 
 
+    """
+    decay epsilon
+    Decaying Epsilon (Epsilon-Greedy with Decay): 
+    Another approach is to start with a higher exploration rate 
+    (e.g., 1.0, meaning the agent always explores) and gradually 
+    decrease it over time as the agent becomes more experienced. 
+    This is based on the intuition that early in training, the agent 
+    should explore more to discover better actions, but as it learns, 
+    it should exploit more to take advantage of its knowledge. 
+    
+    Common decay strategies include linear or exponential decay. 
+    For example, you could decrease epsilon by a small amount after each 
+    episode or after a certain number of time steps.
+
+
+    """
     def run_episode(self, episode_number, alpha=0.05, gamma=0.9):
         """
         Run Q-learning (also known as sarsa-max, finding the optimal policy and value function

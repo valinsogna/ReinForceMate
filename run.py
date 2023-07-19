@@ -11,6 +11,9 @@ import torch
 env = Board()
 p = Piece(piece='king')  # king", "rook", "bishop" or "knight"
 
+
+
+
 # env.render()
 
 # r = Policy_iteration(agent=p,env=env)
@@ -20,12 +23,12 @@ p = Piece(piece='king')  # king", "rook", "bishop" or "knight"
 # r.sarsa_td(n_episodes=1000, alpha=0.2, gamma=0.9)
 # r.visualize_policy() # controllare il risultato
 # r.visualize_action_function()
-# # r.TD_zero(epsilon=0.1, alpha=0.05, lamb=0.9)
+# # # r.TD_zero(epsilon=0.1, alpha=0.05, lamb=0.9)
 
-r = Expected_temporal_difference(agent=p, env=env)
-r.expected_sarsa(n_episodes=1000, alpha=0.2, gamma=0.9)
-r.visualize_policy() # controllare il risultato
-r.visualize_action_function()
+# r = Expected_temporal_difference(agent=p, env=env)
+# r.expected_sarsa(n_episodes=1000, alpha=0.2, gamma=0.9)
+# r.visualize_policy() # controllare il risultato
+# r.visualize_action_function()
 
 
 
