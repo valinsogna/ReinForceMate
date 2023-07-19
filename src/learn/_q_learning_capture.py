@@ -3,6 +3,7 @@ from chess.pgn import Game
 import pandas as pd
 import os
 import contextlib
+from tqdm import tqdm
 
 class Q_learning(object):
 
@@ -37,7 +38,7 @@ class Q_learning(object):
         """
         with open(os.devnull, 'w') as devnull:
             with contextlib.redirect_stdout(devnull):
-                for k in range(iters):
+                for k in tqdm(range(iters)):
                     if k % c == 0:
                         print("iter", k)
                         self.agent.fix_model()
