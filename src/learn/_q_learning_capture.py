@@ -1,7 +1,8 @@
 import numpy as np
 from chess.pgn import Game
 import pandas as pd
-
+import os
+import contextlib
 
 class Q_learning(object):
 
