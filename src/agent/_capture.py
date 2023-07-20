@@ -50,19 +50,14 @@ class Agent(nn.Module):
     
     def __init__(self, verbose=0):
         super(Agent, self).__init__()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.verbose = verbose
-        self.init_linear_network()
+        self.init_linear_networks()
         self.weight_memory = []
         self.long_term_mean = []
         self.loss_fn = nn.MSELoss()
 
-    def init_optimizer(self):
-        """
-        Initializes the optimizer (Stochastic Gradient Descent).
-        """
-
-        self.optimizer = optim.SGD(self.model.parameters(), lr=cfg.comm.lr, momentum=0.0)
+    def init_optimizer(self, parameters):
+        return torch.optim.SGD(parameters, lr=cfg.comm.lr, momentum=0.0)
 
     def create_model(self):
         """
@@ -73,21 +68,36 @@ class Agent(nn.Module):
         model : torch.nn.Module
             The initialized linear neural network model.
         """
-
+        
         model = nn.Sequential(
                 nn.Flatten(),
                 nn.Linear(8*8*8, 4096),
+                nn.ReLU(),
             ).to(self.device)
-    
         return model
 
-    def init_linear_network(self):
-        """
-        Initializes the linear neural network and its optimizer.
-        """
+    def init_linear_networks(self):
+    	"""
+    	Initialize linear networks.
 
-        self.model = self.create_model()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=cfg.comm.lr, momentum=0.0)
+    	This method creates multiple models and optimizers, with the count equal to the number of heads 
+    	specified in the configuration file (cfg.comm.num_heads).
+
+    	It first creates the models by calling `self.create_model()`. Then, it creates an optimizer for 
+    	each model by calling `self.init_optimizer()` with the model parameters.
+
+    	The created models and optimizers are stored in the instance variables `self.models` and 
+    	`self.optimizers` respectively.
+
+    	Raises:
+        	TypeError: An error occurs if `cfg.comm.num_heads` is not an integer.
+
+    	Returns:
+        	None
+    	"""
+    
+        self.models = [self.create_model() for _ in range(cfg.comm.num_heads)]
+        self.optimizers = [self.init_optimizer(model.parameters()) for model in self.models]
 
     # Update the Q-network using samples from the minibatch
     def network_update(self, minibatch):
@@ -103,6 +113,10 @@ class Agent(nn.Module):
                 List of temporal difference errors.
         """
 
+        head_idx = np.random.randint(cfg.comm.num_heads)
+        model = self.models[head_idx]
+        optimizer = self.optimizers[head_idx]
+
         # Convert minibatch data to tensors and move them to the device
         states = torch.tensor(np.array([sample[0] for sample in minibatch]), 
                             dtype=torch.float32, device=self.device)
@@ -115,26 +129,28 @@ class Agent(nn.Module):
 
         # Compute the target Q-values using the Bellman equation
         with torch.no_grad():
-            q_target = rewards + cfg.comm.gamma * torch.max(self.model(new_states), dim=1).values
+            q_target = rewards + cfg.comm.gamma * torch.max(model(new_states), dim=1).values
 
         # Compute the Q-values for the current states
-        q_state = self.model(states)
+        q_state = model(states)
 
         # Map move_from, move_to to a single index
         single_index_moves = moves[:, 0] * 64 + moves[:, 1]
 
         td_errors = []
+        # Create a clone of q_state for modification
+        q_state_clone = q_state.clone()
         for idx, move in enumerate(single_index_moves):
             td_errors.append(q_state[idx, move] - q_target[idx])
-            q_state[idx, move] = q_target[idx]
+            q_state_clone[idx, move] = q_target[idx]
 
-        q_state = q_state.view(len(minibatch), -1)
+        q_state_clone = q_state_clone.view(len(minibatch), -1)
 
-        self.optimizer.zero_grad()
-        # Use q_target as the target in MSE loss calculation
-        loss = self.loss_fn(q_state, q_state)  
+        optimizer.zero_grad()
+        # Use q_state_clone as the target in MSE loss calculation
+        loss = self.loss_fn(q_state_clone, q_state)  
         loss.backward()
-        self.optimizer.step()
+        optimizer.step()
 
         return [td_error.item() for td_error in td_errors]
 
@@ -155,14 +171,14 @@ class Agent(nn.Module):
         # Clone and move the state to the device, and add a batch dimension
         state = state.clone().detach().to(self.device).unsqueeze(0).float()
 
-        # Forward propagate through the model to get action values
-        action_values = self.model(state)
+        # Forward propagate through all models and take the mean
+        action_values = torch.mean(torch.stack([model(state) for model in self.models]), dim=0)
 
         # Add a small amount of random noise for exploration
         action_values += torch.randn_like(action_values) * 1e-9
 
         return action_values.detach()
-
+        
     # Update the policy network using the policy gradient method
     def policy_gradient_update(self, states, actions, rewards, action_spaces, actor_critic=False):
         """
