@@ -1,141 +1,131 @@
-import torch
-import pprint
+from ._base import BaseLearn
+from ..config import Config as cfg
+from typing import List
 
+class Q_LearningMove(BaseLearn):
+    """
+    Implements the Q-learning algorithm (also known as SARSA-max) to find the optimal move in a chess game.
 
-class Q_learning_move(object):
-    def __init__(self, agent, env):
-        self.agent = agent
-        self.env = env
+    """
+    def __init__(self, **kwargs):
+        """
+        Initializes the Q_LearningMove class.
+
+        Args:
+            kwargs (dict): Any additional keyword arguments.
+        """
+
+        super().__init__(**kwargs)
 
     def q_learning(self, n_episodes=1000, alpha=0.05, gamma=0.9):
         """
-        Run Q-learning (also known as sarsa-max, finding the optimal policy and value function
-        :param n_episodes: int, amount of episodes to train
-        :param alpha: learning rate
-        :param gamma: discount factor of future rewards
-        :return: finds the optimal move chess policy
+        Executes the Q-learning algorithm to find the optimal policy and value function.
+
+        Args:
+            n_episodes (int, optional): The number of episodes to train. Defaults to 1000.
+            alpha (float, optional): The learning rate. Defaults to 0.05.
+            gamma (float, optional): The discount factor for future rewards. Defaults to 0.9.
+
+        Returns:
+            None. The optimal move chess policy is determined by this method.
         """
+
         for k in range(n_episodes):
-            state = (0, 0)
+            # Initialize the starting state
+            state = (0, 0) 
             self.env.state = state
             episode_end = False
-            epsilon = max(1 / (k + 1), 0.1)
+            # Calculate the epsilon value for epsilon-greedy policy
+            epsilon = max(1 / (k + 1), 0.1)  
+
+            # Run a single episode
             while not episode_end:
-                action_index = self.agent.apply_policy(state, epsilon)
-                action = self.agent.action_space[action_index]
-                reward, episode_end = self.env.step(action)
-                successor_state = self.env.state
-                successor_action_index = self.agent.apply_policy(successor_state, -1)
+                # Select an action index using epsilon-greedy policy
+                action_index = self.agent.apply_policy(state, epsilon)  
+                # Convert the action index to an action
+                action = self.agent.action_space[action_index]  
+                # Take a step in the environment with the selected action
+                reward, episode_end = self.env.step(action) 
+                # Get the successor state 
+                successor_state = self.env.state  
+                # Apply a greedy policy for the successor state
+                successor_action_index = self.agent.apply_policy(successor_state, -1)  
 
-                action_value = self.agent.action_function[state[0], state[1], action_index]
+                # Get the current action value
+                action_value = self.agent.action_function[state[0], state[1], action_index]  
                 if not episode_end:
-                    successor_action_value = self.agent.action_function[successor_state[0],
-                                                                        successor_state[1], successor_action_index]
+                    # Get the action value for the successor state
+                    successor_action_value = self.agent.action_function[successor_state[0], successor_state[1], successor_action_index]  
                 else:
-                    successor_action_value = 0
+                    # If the episode ends, set the successor action value to 0
+                    successor_action_value = 0  
 
-                av_new = self.agent.action_function[state[0], state[1], action_index] + alpha * (reward +
-                                                                                                 gamma *
-                                                                                                 successor_action_value
-                                                                                                 - action_value)
+                # Update the action value based on the Q-learning update rule
+                av_new = action_value + alpha * (reward + gamma * successor_action_value - action_value)
                 self.agent.action_function[state[0], state[1], action_index] = av_new
-                self.agent.policy = self.agent.action_function.clone()
-                state = successor_state
+
+                # Update the policy based on the updated action function
+                self.agent.policy = self.agent.action_function.clone() 
+                # Update the state to the successor state
+                state = successor_state  
 
 
-    """
-    decay epsilon
-    Decaying Epsilon (Epsilon-Greedy with Decay): 
-    Another approach is to start with a higher exploration rate 
-    (e.g., 1.0, meaning the agent always explores) and gradually 
-    decrease it over time as the agent becomes more experienced. 
-    This is based on the intuition that early in training, the agent 
-    should explore more to discover better actions, but as it learns, 
-    it should exploit more to take advantage of its knowledge. 
-    
-    Common decay strategies include linear or exponential decay. 
-    For example, you could decrease epsilon by a small amount after each 
-    episode or after a certain number of time steps.
 
-
-    """
     def run_episode(self, episode_number, alpha=0.2, gamma=0.9):
         """
-        Run Q-learning (also known as sarsa-max, finding the optimal policy and value function
-        :param n_episodes: int, amount of episodes to train
-        :param alpha: learning rate
-        :param gamma: discount factor of future rewards
-        :return: finds the optimal move chess policy
+        Runs a single episode of the Q-learning algorithm to find the optimal policy and value function.
+
+        Args:
+            episode_number (int): The current episode number.
+            alpha (float, optional): The learning rate. Defaults to 0.2.
+            gamma (float, optional): The discount factor for future rewards. Defaults to 0.9.
+
+        Returns:
+            float: The total reward for the episode.
         """
-        reward_step = []
-        state = (0, 0)
+
+        # Stores the rewards obtained at each step in the episode
+        reward_step = []  
+        # Initialize the starting state
+        state = (0, 0)  
         self.env.state = state
         episode_end = False
-        epsilon = max(1 / (episode_number + 1), 0.1)
+        # Calculate the epsilon value for epsilon-greedy policy
+        epsilon = max(1 / (episode_number + 1), 0.1)  
+
+        # Run a single episode
         while not episode_end:
-            action_index = self.agent.apply_policy(state, epsilon)
-            action = self.agent.action_space[action_index]
-            reward, episode_end = self.env.step(action)
-            reward_step.append(reward)
-            successor_state = self.env.state
-            successor_action_index = self.agent.apply_policy(successor_state, -1)
+            # Select an action index using epsilon-greedy policy
+            action_index = self.agent.apply_policy(state, epsilon)  
+            # Convert the action index to an action
+            action = self.agent.action_space[action_index] 
+            # Take a step in the environment with the selected action 
+            reward, episode_end = self.env.step(action) 
+            # Store the reward obtained at the current step 
+            reward_step.append(reward)  
+            # Get the successor state
+            successor_state = self.env.state  
+            # Apply a greedy policy for the successor state
+            successor_action_index = self.agent.apply_policy(successor_state, -1)  
 
-            action_value = self.agent.action_function[state[0], state[1], action_index]
+            # Get the current action value
+            action_value = self.agent.action_function[state[0], state[1], action_index]  
             if not episode_end:
-                successor_action_value = self.agent.action_function[successor_state[0],
-                                                                    successor_state[1], successor_action_index]
+                # Get the action value for the successor state
+                successor_action_value = self.agent.action_function[successor_state[0], successor_state[1], successor_action_index]  
             else:
-                successor_action_value = 0
+                # If the episode ends, set the successor action value to 0
+                successor_action_value = 0  
 
-            av_new = self.agent.action_function[state[0], state[1], action_index] + alpha * (reward +
-                                                                                                gamma *
-                                                                                                successor_action_value
-                                                                                                - action_value)
+            # Update the action value based on the Q-learning update rule
+            av_new = action_value + alpha * (reward + gamma * successor_action_value - action_value)
             self.agent.action_function[state[0], state[1], action_index] = av_new
+
+            # Update the policy based on the updated action function
             self.agent.policy = self.agent.action_function.clone()
-            state = successor_state
+            # Update the state to the successor state  
+            state = successor_state 
 
-        return sum(reward_step)
+        # Return the total reward for the episode
+        return sum(reward_step)  
 
-
-
-    def visualize_policy(self):
-        """
-        Gives you are very ugly visualization of the policy
-        Returns: None
-
-        """
-        greedy_policy = self.agent.policy.argmax(axis=2)
-        policy_visualization = {}
-        if self.agent.piece == 'king':
-            arrows = "↑ ↗ → ↘ ↓ ↙ ← ↖"
-            visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
-        elif self.agent.piece == 'knight':
-            arrows = "↑↗ ↗→ →↘ ↓↘ ↙↓ ←↙ ←↖ ↖↑"
-            visual_row = ["[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]"]
-        elif self.agent.piece == 'bishop':
-            arrows = "↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖"
-            visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
-        elif self.agent.piece == 'rook':
-            arrows = "↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ←"
-            visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
-        arrowlist = arrows.split(" ")
-        for idx, arrow in enumerate(arrowlist):
-            policy_visualization[idx] = arrow
-        visual_board = []
-        for c in range(8):
-            visual_board.append(visual_row.copy())
-
-        for row in range(greedy_policy.shape[0]):
-            for col in range(greedy_policy.shape[1]):
-                idx = greedy_policy[row, col].item()
-
-                visual_board[row][col] = policy_visualization[idx]
-
-        visual_board[self.env.terminal_state[0]][self.env.terminal_state[1]] = "F"
-        pprint.pprint(visual_board)
-        
-
-    def visualize_action_function(self):
-        # print(self.agent.action_function.max(axis=2).round().astype(int))
-        print(torch.max(self.agent.action_function, dim=2)[0].to(torch.int))

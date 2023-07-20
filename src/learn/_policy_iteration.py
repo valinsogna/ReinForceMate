@@ -1,44 +1,70 @@
 import torch
 import pprint
+from ._base import BaseLearn
+from ..config import Config as cfg
+import itertools
 
+class PolicyIteration(BaseLearn):
+    """
+    Class for implementing the Policy Iteration Reinforcement Learning algorithm.
 
-class Policy_iteration(object):
-    def __init__(self, agent, env):
-        self.agent = agent
-        self.env = env
+    Args:
+        kwargs: Arguments required by the parent BaseLearn class.
+    """
+
+    def __init__(self, **kwargs):
+        """
+        Initializes the PolicyIteration class.
+
+        Args:
+            kwargs (dict): Arguments needed for the parent BaseLearn class.
+        """
+
+        super().__init__(**kwargs)
         self.cumulative_rewards = []
         
+    # Calculates the value of a state based on the successor states and the immediate rewards
     def evaluate_state(self, state, gamma=0.9, synchronous=True):
         """
         Calculates the value of a state based on the successor states and the immediate rewards.
+
         Args:
-            state: tuple of 2 integers 0-7 representing the state
-            gamma: float, discount factor
-            synchronous: Boolean
+            state (tuple): Tuple of 2 integers 0-7 representing the state.
+            gamma (float): Discount factor. Defaults to 0.9.
+            synchronous (bool): If True, performs synchronous updates. Defaults to True.
 
-        Returns: The expected value of the state under the current policy.
-
+        Returns:
+            float: The expected value of the state under the current policy.
         """
 
+        # Find the greedy action value and all corresponding greedy actions
         greedy_action_value = torch.max(self.agent.policy[state[0], state[1], :])
         greedy_indices = [i for i, a in enumerate(self.agent.policy[state[0], state[1], :]) if
-                          a == greedy_action_value]  # List of all greedy actions
-        prob = 1 / len(greedy_indices)  # probability of an action occuring
+                        a == greedy_action_value]  # List of all greedy actions
+        prob = 1 / len(greedy_indices)  # probability of an action occurring
         state_value = 0
-        for i in greedy_indices:
-            self.env.state = state  # reset state to the one being evaluated
-            reward, episode_end = self.env.step(self.agent.action_space[i])
 
+        for i in greedy_indices:
+            self.env.state = state  # Reset state to the one being evaluated
+            reward, episode_end = self.env.step(self.agent.action_space[i])
 
             if synchronous:
                 successor_state_value = self.agent.value_function_prev[self.env.state]
             else:
                 successor_state_value = self.agent.value_function[self.env.state]
-            state_value += (prob * (
-                    reward + gamma * successor_state_value))  # sum up rewards and discounted successor state value
+            
+            state_value += (prob * (reward + gamma * successor_state_value))  # Sum up rewards and discounted successor state value
+
         return state_value
 
     def evaluate_policy(self, gamma=0.9, synchronous=True):
+        """
+        Evaluates the current policy over all states.
+
+        Args:
+            gamma (float): Discount factor. Defaults to 0.9.
+            synchronous (bool): If True, performs synchronous updates. Defaults to True.
+        """
 
         self.agent.value_function_prev = self.agent.value_function.clone()  # For synchronous updates
         for row in range(self.agent.value_function.shape[0]):
@@ -46,154 +72,135 @@ class Policy_iteration(object):
                 self.agent.value_function[row, col] = self.evaluate_state((row, col), gamma=gamma,
                                                                           synchronous=synchronous)
 
-
-
-
     def improve_policy(self):
         """
-        Finds the greedy policy w.r.t. the current value function
+        Finds the greedy policy with respect to the current value function.
+
+        Returns:
+            float: The total reward under the updated policy.
         """
 
         rewards = 0
 
-        self.agent.policy_prev = self.agent.policy.clone()
+        self.agent.policy_prev = self.agent.policy.clone()  # Store the previous policy for comparison
+
+        # Iterate over each state in the action function
         for row in range(self.agent.action_function.shape[0]):
             for col in range(self.agent.action_function.shape[1]):
-                for action in range(self.agent.action_function.shape[2]):
-                    self.env.state = (row, col)  # reset state to the one being evaluated
-                    reward, episode_end = self.env.step(self.agent.action_space[action])
-                    rewards += reward
 
+                # Iterate over each action in the action function for the current state
+                for action in range(self.agent.action_function.shape[2]):
+                    self.env.state = (row, col)  # Reset state to the one being evaluated
+                    reward, episode_end = self.env.step(self.agent.action_space[action])
+                    rewards += reward  # Accumulate the rewards obtained
+
+                    # Calculate the value of the successor state
                     successor_state_value = 0 if episode_end else self.agent.value_function[self.env.state]
+
+                    # Update the policy with the sum of the immediate reward and the successor state value
                     self.agent.policy[row, col, action] = reward + successor_state_value
 
+                # Find the maximum policy value for the current state
                 max_policy_value = torch.max(self.agent.policy[row, col, :])
+
+                # Find the indices of all actions with the maximum policy value
                 max_indices = [i for i, a in enumerate(self.agent.policy[row, col, :]) if a == max_policy_value]
+
+                # Set the policy value of the maximum indices to 1, making them the greedy actions
                 for idx in max_indices:
                     self.agent.policy[row, col, idx] = 1
-        
-        return rewards
 
-
+        return rewards  # Return the total reward obtained under the updated policy
 
     def policy_iteration(self, eps=0.1, gamma=0.9, iteration=1, k=32, synchronous=True):
         """
-        Finds the optimal policy
+        Performs the policy iteration process to find the optimal policy.
+
         Args:
-            eps: float, exploration rate
-            gamma: float, discount factor
-            iteration: the iteration number
-            k: (int) maximum amount of policy evaluation iterations
-            synchronous: (Boolean) whether to use synchronous are asynchronous back-ups 
-
-        Returns:
-
+            eps (float): Threshold for policy evaluation. Defaults to 0.1.
+            gamma (float): Discount factor. Defaults to 0.9.
+            iteration (int): Current iteration number. Defaults to 1.
+            k (int): Maximum number of policy evaluation iterations. Defaults to 32.
+            synchronous (bool): If True, performs synchronous updates. Defaults to True.
         """
-        policy_stable = True
-        # print("\n\n______iteration:", iteration, "______")
-        # print("\n policy:")
-        # self.visualize_policy()
+
+        policy_stable = True  # Flag to indicate if the policy is stable
 
         print("")
         value_delta_max = 0
+
+        # Policy Evaluation: Update the value function using the current policy
         for _ in range(k):
-            self.evaluate_policy(gamma=gamma, synchronous=synchronous)
+            self.evaluate_policy(gamma=gamma, synchronous=synchronous)  # Evaluate the current policy
             value_delta = torch.max(torch.abs(self.agent.value_function_prev - self.agent.value_function))
             value_delta_max = value_delta
             if value_delta_max < eps:
                 break
-        # print("Value function for this policy:")
-        # print(torch.round(self.agent.value_function).to(torch.int))
+
         action_function_prev = self.agent.action_function.clone()
-        # print("\n Improving policy:")
+
+        # Policy Improvement: Update the policy based on the updated value function
         self.improve_policy()
+
+        # Check if the policy has changed
         policy_stable = self.agent.compare_policies() < 1
-        # print("policy diff:", policy_stable)
 
         if not policy_stable and iteration < 1000:
+            # If the policy is not stable and the maximum iteration limit is not reached, continue policy iteration
             iteration += 1
-            # print(self.calculate_cumulative_rewards())
             self.policy_iteration(iteration=iteration)
         elif policy_stable:
+            # If the policy is stable, the optimal policy is found
             print("Optimal policy found in", iteration, "steps of policy evaluation")
-            # print(self.calculate_cumulative_rewards())
         else:
+            # If the policy does not converge within the maximum number of iterations, print a failure message
             print("failed to converge.")
 
-
-
     def calculate_cumulative_rewards(self, num_episodes=1):
+        """
+        Calculates the cumulative rewards over a number of episodes.
+
+        Args:
+            num_episodes (int): Number of episodes to consider. Defaults to 1.
+
+        Returns:
+            list: Cumulative rewards over the episodes.
+        """
 
         for k in range(num_episodes):
             self.env.reset()
             episode_reward = 0
             episode_end = False
             iteration = 0
+
+            # Run a single episode
             while not episode_end:
                 iteration += 1
                 state = self.env.state
-                action_index = self.agent.apply_policy(state, epsilon=0) # no exploration (greedy)
+                action_index = self.agent.apply_policy(state, epsilon=0)  # No exploration (greedy)
                 action = self.agent.action_space[action_index]
                 reward, episode_end = self.env.step(action)
                 episode_reward += reward
-            self.cumulative_rewards.append(episode_reward)
+
+            self.cumulative_rewards.append(episode_reward)  # Store the cumulative reward for the episode
 
         return self.cumulative_rewards
 
-
-
-
     def run_episode(self, eps=0.1, gamma=0.9, iteration=1, k=32, synchronous=True):
-        
+        """
+        Runs the policy iteration for a single episode and calculates cumulative rewards.
+
+        Args:
+            eps (float): Threshold for policy evaluation. Defaults to 0.1.
+            gamma (float): Discount factor. Defaults to 0.9.
+            iteration (int): Current iteration number. Defaults to 1.
+            k (int): Maximum number of policy evaluation iterations. Defaults to 32.
+            synchronous (bool): If True, performs synchronous updates. Defaults to True.
+
+        Returns:
+            list: Cumulative rewards over the episode.
+        """
+
         self.evaluate_policy(gamma=gamma,synchronous=synchronous)
         self.improve_policy()
         return self.calculate_cumulative_rewards()
-
-
-
-
-
-
-
-    def visualize_policy(self):
-        """
-        Gives you are very ugly visualization of the policy
-        Returns: None
-
-        """
-        greedy_policy = self.agent.policy.argmax(axis=2)
-        policy_visualization = {}
-
-        if self.agent.piece == 'king':
-            arrows = "↑ ↗ → ↘ ↓ ↙ ← ↖"
-            visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
-        elif self.agent.piece == 'knight':
-            arrows = "↑↗ ↗→ →↘ ↓↘ ↙↓ ←↙ ←↖ ↖↑"
-            visual_row = ["[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]", "[  ]"]
-        elif self.agent.piece == 'bishop':
-            arrows = "↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖ ↗ ↘ ↙ ↖"
-            visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
-        elif self.agent.piece == 'rook':
-            arrows = "↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ← ↑ → ↓ ←"
-            visual_row = ["[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]", "[ ]"]
-
-        arrowlist = arrows.split(" ")
-
-        for idx, arrow in enumerate(arrowlist):
-            policy_visualization[idx] = arrow
-        visual_board = []
-        for c in range(8):
-            visual_board.append(visual_row.copy())
-
-        for row in range(greedy_policy.shape[0]):
-            for col in range(greedy_policy.shape[1]):
-                idx = greedy_policy[row, col].item()
-
-                visual_board[row][col] = policy_visualization[idx]
-
-        visual_board[self.env.terminal_state[0]][self.env.terminal_state[1]] = "F"
-        pprint.pprint(visual_board)
-
-
-    def visualize_action_function(self):
-        print(torch.round(self.agent.value_function).to(torch.int))
