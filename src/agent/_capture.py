@@ -57,7 +57,7 @@ class Agent(nn.Module):
         self.loss_fn = nn.MSELoss()
 
     def init_optimizer(self, parameters):
-        return torch.optim.SGD(parameters, lr=cfg.comm.lr, momentum=0.0)
+        return torch.optim.Adam(parameters, lr=cfg.comm.lr, weight_decay=1e-4)
 
     def create_model(self):
         """
@@ -71,9 +71,13 @@ class Agent(nn.Module):
         
         model = nn.Sequential(
                 nn.Flatten(),
-                nn.Linear(8*8*8, 4096),
+                nn.Linear(8*8*8, 256),
                 nn.ReLU(),
+                nn.Linear(256, 256),
+                nn.ReLU(),
+                nn.Linear(256, 4096)
             ).to(self.device)
+        
         return model
 
     def init_linear_networks(self):
