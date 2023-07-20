@@ -1,4 +1,4 @@
-import setuptools 
+import setuptools
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setuptools.setup(
     name='ReinForceMate',
     version='0.1.0',
-    author='['Silvio Baratto', 'Valeria Insogna', 'Thomas Verardo']',
+    author=['Silvio Baratto', 'Valeria Insogna', 'Thomas Verardo'],
     author_email='silvio.baratto22@gmail.com',
     description='A simplified version of chess game via RL algorithm',
     long_description=long_description,
@@ -29,3 +29,4 @@ setuptools.setup(
         "chess"
     ],
 )
+
