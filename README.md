@@ -1,77 +1,124 @@
-# RainForceMate
-A simplified version of chess game via RL algorithm
+# README
 
-## Introduction
-Two environments are available in this project:
-- **Shortest Path**: is a deterministic game whose aim is to find the shortest path between two cells according to the piece (agent) using both simple RL (Policy Evaluation/Improvement/Iteration) algorithms and model-free techniques (MonteCarlo, TD learning, SARSA, Q -learning for example).
-- **Capture pieces**: the goal is to capture as many of the opponent's pieces in as many moves using Q-learning, Policy Gradient or REINFORCE techniques. In this case the agent would be the player (no longer the piece) who, once run, can capture pieces against an opponent. Since chess has a space complexity of $10^{46}$ we would also like to be able to implement a NN to do Q-network learning.
+## Overview
 
-## Requirements
+This script contains a suite of reinforcement learning algorithms, all applied to a game of chess. The game is viewed as a Markov Decision Process (MDP), and the algorithms learn a policy to play the game. The algorithms included are Policy Iteration, Temporal Difference, Expected Temporal Difference, Temporal Difference Lambda, and Q-Learning.
 
-Remember to install Python-Chess library:
+## Getting Started
+
+You need Python installed on your computer to run the script. If you don't have Python installed, you can download it from the [official website](https://www.python.org/downloads/).
+
+Also, this script relies on the following Python libraries:
+- torch
+- matplotlib
+- numpy
+- tqdm
+- chess
+
+You can install them using pip:
+
+```
+pip install torch matplotlib numpy tqdm chess
+```
+
+## Installation
+You can clone the ReinForceMate repository and install the package using the following commands:
 
 ```bash
-conda install -c conda-forge python-chess
+> git clone https://github.com/valinsogna/ReinForceMate
+> cd ReinForceMate
+> ./install.sh
 ```
 
-## Capture pieces
+## Usage
 
-It's a simplified version of chess. 
+The script is structured into different sections, each applying a different algorithm.
 
-In this environment the agent (playing white) is rewarded for capturing pieces (not for checkmate). 
-
-After running this notebook, you end up with an agent that can capture pieces against a random oponnent.
-
-Here Q-networks algorithm (as an alternative to Q-tables in **Shortest Path**) is used since chess has state space complexity of $10^46$ (too much information to put in a Q-table).
-
-## Python-Chess library
-You can create a chess board object using the chess.Board() class:
-    
-```python
-import chess
-board = chess.Board()
-```
-
-You can call .board() to get a visual representation of the board:
+First, the script imports the necessary modules from the ReinForceMate package, along with the other necessary libraries.
 
 ```python
-board.board()
+from ReinForceMate import Q_LearningMove
+from ReinForceMate import TemporalDifference
+from ReinForceMate import TemporalDifferenceLambda
+from ReinForceMate import PolicyIteration
+from ReinForceMate import ExpectedTemporalDifference
+import torch
+import time
+import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
 ```
-The output is the following:
 
-<img src="./img/board.png" alt="board()" style="width:300px;height:300px;">
+The script then applies several reinforcement learning algorithms to learn a policy for playing chess.
 
-You can print the current board using the print() function:
-
-```python   
-print(board)
-```
-
-You can make a move using the .push_san() method using algebraic notation:
+For example, to apply the Policy Iteration algorithm:
 
 ```python
-board.push_san("e4") # e2 to e4
+r = PolicyIteration(piece='bishop')
+policy_iter_rewards = r.run_episode()
 ```
 
-Or using UCI notation:
-    
-```python   
-board.push_uci("g1f3") # g1 to f3
-```
+The `run_episode` method plays a full game of chess using the current policy and returns the total reward obtained.
 
-Or others operations like:
-    
+After each algorithm has been run, the script will visualize the learnt policy, for example:
+
 ```python
-# Check if the game is over
-if board.is_game_over():
-    print("Game over!")
-
-# Get a list of legal moves
-legal_moves = list(board.legal_moves)
-
-# Check the current side to move
-if board.turn == chess.WHITE:
-    print("White to move")
-else:
-    print("Black to move")
+r.visualize_policy()
 ```
+
+The script also evaluates the performance of the algorithms. It plays a certain number of episodes with each algorithm and measures the time it takes to complete. The average cumulative reward for each algorithm is then plotted:
+
+```python
+for result in results:
+    plt.plot(np.cumsum(result['rewards']) / np.arange(1, n_of_episodes+1), label=result['name'])
+plt.legend()
+plt.title('Average Cumulative Reward')
+plt.show()
+```
+
+The performance of different piece types with Policy Iteration is evaluated in a similar way:
+
+```python
+algorithms = [
+    PolicyIteration(piece='king'),
+    PolicyIteration(piece='rook'),
+    PolicyIteration(piece='knight'),
+    PolicyIteration(piece='bishop')
+]
+```
+
+Finally, Q-Learning performance is evaluated for different values of alpha:
+
+```python
+for alpha in tqdm([0.001, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5]):
+    td = Q_LearningMove(piece='king')
+    for episode in range(n_of_episodes):
+        reward = td.run_episode(episode, alpha=alpha)
+    rewards.append(reward)
+```
+
+Please refer to the source code comments for a more in-depth understanding of the workings of each algorithm.
+
+## Customization
+
+You can customize the algorithms by modifying the parameters they accept. For example, you can change the `piece` parameter in the `PolicyIteration` instantiation to apply the algorithm to a different chess piece:
+
+```python
+r = PolicyIteration(piece='rook')
+```
+
+You can also change the number of episodes played in the evaluation stage by modifying the `n_of_episodes` variable:
+
+```python
+n_of_episodes = 200
+```
+
+For Q-Learning, you can change the values of alpha to experiment with:
+
+```python
+for alpha in tqdm([0.001, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]):
+```
+
+## Additional Details
+
+This script also generates csv files with performance results and chess piece values, as well as a PGN file containing the game played during the Q-Learning stage. Please ensure that the directory you are running the script in allows file writing to access these generated files.
